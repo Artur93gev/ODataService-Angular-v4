@@ -40,7 +40,7 @@ type operator = {
   name: string;
   logical?: string;
   value: string;
-  isGrupped?: boolean;
+  isGroupped?: boolean;
 }
 
 type func = {
