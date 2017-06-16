@@ -71,7 +71,7 @@ export class OData {
     }
 
 
-    unity.method = (name: string, action: any) => {
+    unity.add = (name: string, action: any) => {
       proto[name] = action;
       unity[name] = action;
       return unity;
@@ -85,16 +85,16 @@ export class OData {
 
     // }
 
-    unity.method('id', id)
-        .method('select', select)
-        .method('format', format)
-        .method('expand', expand)
-        .method('inlineCount', inlineCount)
-        .method('filter', filter)
-        .method('orderBy', orderBy)
-        .method('top', top)
-        .method('skip', skip)
-        .method('then', then);
+    unity.add('id', id)
+        .add('select', select)
+        .add('format', format)
+        .add('expand', expand)
+        .add('inlineCount', inlineCount)
+        .add('filter', filter)
+        .add('orderBy', orderBy)
+        .add('top', top)
+        .add('skip', skip)
+        .add('then', then);
 
     return unity;
   }
