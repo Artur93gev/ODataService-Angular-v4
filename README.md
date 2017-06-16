@@ -9,9 +9,11 @@ to make life easier when you're acting with OData query's
 
 # Usage example
 
+Here is an example with config object passing 
+
 ```
-import { OData } from 'services/OData';
-import { query } from 'models/OData'
+import { OData } from './services/OData';
+import { query } from './models/OData'
 
 export class TestingOdata {
   
@@ -36,4 +38,30 @@ export class TestingOdata {
     let testTransformQuery = this.OData.get(query); // this is function returns transformd query as query params
   }
 }
+```
+
+But you can also use functions chain like syntax to transform your query
+
+```
+import { OData } from './services/OData'
+
+export class TestingData {
+  
+  constructor(
+    private OData: OData
+  ) {
+    let testing = this.OData.get();
+    testing()
+      .id(4)
+      .select(['test1', 'test2'])
+      .skip(34)
+      .top(10)
+      .then(
+        (value: string) => {
+          console.log(value);
+        }
+      )
+  }
+}
+
 ```
