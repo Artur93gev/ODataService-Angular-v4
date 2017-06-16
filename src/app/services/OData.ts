@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 
-import { query, order } from '../models/OData';
+import { query, order, filter } from '../models/OData';
 import { STORE as store } from '../assets/js/ODataStore';
 
 @Injectable()
@@ -17,13 +17,10 @@ export class OData {
 
   transform(options: query): string {
     if (options.system) {
+
       let query: string = '';
       
-      if (options.id) {
-        query = `(${options.id})?`;
-      } else {
-        query = '?';
-      }
+      query = this.checkForId(options.id);
 
       const system = options.system;
 
@@ -38,12 +35,8 @@ export class OData {
       */
 
       if (system.skip) {
-        if (typeof system.skip == 'number') {
-          query = this.checkForAddingAmpersant(query);
-          query +=`&$skip=${system.skip}`;
-        } else {
-          throw new Error(`skip property must be typeof number not ${typeof system.skip}`)
-        }
+        query += this.checkForAddingAmpersant(query);
+        query += this.skip(system.skip);
       }
 
       /* 'top' system query parameter workflow
@@ -56,18 +49,14 @@ export class OData {
       */
 
       if (system.top) {
-        if (typeof system.top == 'number') {
-          query = this.checkForAddingAmpersant(query);
-          query += `$top=${system.top}`;
-        } else {
-          throw new Error(`top property must be typeof number not ${typeof system.top}`)
-        }
+        query += this.checkForAddingAmpersant(query);
+        query += this.top(system.top);
       }
       
       // order by functionality (default asc(increment))
 
       if (system.orderby) {
-        query = this.checkForAddingAmpersant(query);
+        query += this.checkForAddingAmpersant(query);
         query += this.order(system.orderby);
       }
 
@@ -82,52 +71,9 @@ export class OData {
 
 
       if (system.filter) {
-        query = this.checkForAddingAmpersant(query);
 
-        if (system.filter.func) {
-          if (store.functions.indexOf(system.filter.func.name) != -1) {
-            query += `$filter=${system.filter.func.name}(${system.filter.func.value}) eq ${system.filter.func.eqTo}`;
-          } else {
-            throw new Error(
-              `system filter function property can't have ${system.filter.func.name} value`
-            );
-          }
-        } else if (system.filter.operators) {
-          query += `$filter=${system.filter.value}`;
-          if (system.filter.valueName) {
-            query += `/${system.filter.valueName}`;
-          }
-
-          for (let i = 0; i < system.filter.operators.length; i++) {
-
-            //  check on logical operator existing and validation
-
-            let logical: string;
-            if (system.filter.operators[i].logical) {
-              if (store.logical.indexOf(system.filter.operators[i].logical) != -1) {
-                logical = system.filter.operators[i].logical;
-              } else {
-                throw new Error(`logical property can't have ${system.filter.operators[i].logical} value`);
-              }
-            } else {
-              logical = '';
-            }
-
-            // check on compare operator existing 
-
-            if (store.compare.indexOf(system.filter.operators[i].value) != -1) {
-              query += ` ${system.filter.operators[i].name}`;
-              if (i == system.filter.operators.length - 1) {
-                break;
-              }
-              query += logical;
-            } else {
-              throw new Error(`comapre property can't have ${system.filter.operators[i].value} value`);
-            }
-          }
-        } else {
-          // throw new Error(`filter type can have 'function', 'expression' value not ${system.filter.type}`);
-        }
+        query += this.checkForAddingAmpersant(query);
+        query += this.filter(system.filter);
       }
 
       /* 'select' system query property workflow
@@ -142,16 +88,8 @@ export class OData {
 
       if (system.select) {
 
-        query = this.checkForAddingAmpersant(query);
-
-        query += `$select=`;
-        for (let i = 0; i < system.select.length; i++) {
-          query += `${system.select[i]}`;
-          if (i == system.select.length - 1) {
-            break;
-          }
-          query += ',';
-        }
+        query += this.checkForAddingAmpersant(query);
+        query += this.select(system.select);
       }
 
       /* 'expand' system query parameter workflow
@@ -163,18 +101,8 @@ export class OData {
 
       if (system.expand) {
 
-        query = this.checkForAddingAmpersant(query);
-
-        for (let i = 0; i < system.expand.length; i++) {
-          query += `$expand=${system.expand[i].value}`;
-          if (system.expand[i].valueName) {
-            query += `/${system.expand[i].valueName}`;
-          }
-          if (i == system.expand.length - 1) {
-            break;
-          }
-          query += ',';
-        }
+        query += this.checkForAddingAmpersant(query);
+        query += this.expand(system.expand);
       }
 
       /* 'format' system query option
@@ -185,13 +113,9 @@ export class OData {
 
       if (system.format) {
 
-        query = this.checkForAddingAmpersant(query);
+        query += this.checkForAddingAmpersant(query);
 
-        if (store.format.indexOf(system.format) != -1) {
-          query += `$format=${system.format}`;
-        } else {
-          throw new Error(`'format' can have 'json', 'xml' and 'atom' value not ${system.format}`);
-        }
+        query += this.format(system.format);
       }
 
 
@@ -205,29 +129,33 @@ export class OData {
 
       if (system.inlineCount) {
 
-        query = this.checkForAddingAmpersant(query);
+        query += this.checkForAddingAmpersant(query);
 
-        if (store.inlineCount.indexOf(system.inlineCount) != -1) {
-          query += `$inlinecount=${system.inlineCount}`;
-        } else {
-          throw new Error(`'inlinecount' can have 'allpages' and 'none' value not ${system.inlineCount}`);
-        }
+        query += this.inlineCount(system.inlineCount);
       }
 
       if (options.custom) {
 
+        /*
+          not implemented yet!
+        */
+
       } else {
         console.info(`%cNo custom params founded in this query ${options}`, 'color:blue');
       }
+
       if (options.service) {
+
+        /*
+          not implemented yet!
+        */
+
+      } else {
         console.info(`%cNo service params founded in this query ${options}`, 'color:blue');
       }
       return query;
     } else {
-      throw new Error(
-        `Cannot construct any OData query without 
-        system query params.`
-      );
+      this.errorHandler(`Cannot construct any OData query without system query params.`);
     }
   }
 
@@ -241,6 +169,7 @@ export class OData {
   protected order(data : order) {
     let query: string = '$orderby=';
     let type: string;
+    
     if (data.type || (!data.type && !data.hasOwnProperty('type'))) {
       type = 'asc';
     } else {
@@ -251,10 +180,7 @@ export class OData {
       if (data.categoryName) {
         query += `,${data.categoryName}/` + this.order(data.category);
       } else {
-        throw new Error(
-          `category can't be specified without categoryName property
-          ${data.category}`
-        );
+        this.errorHandler(`category can't be specified without categoryName property ${data.category}`);
       }
     } else {
       return query;
@@ -270,6 +196,144 @@ export class OData {
   */
 
   protected checkForAddingAmpersant(query: string): string {
-    return query[query.length - 1] == '?' ? query : query += '&';
+    return query[query.length - 1] == '?' ? '' : '&';
+  }
+
+
+  protected checkForId(id: number): string {
+    return id ? `(${id})?` : '?';
+  }
+
+  protected skip(val : number): string {
+    if (typeof val == 'number') {
+      return `$skip=${val}`;
+    } else {
+      this.errorHandler(`skip property must be typeof number not ${typeof val}`);
+    }
+  }
+
+  protected top(val: number): string {
+    if (typeof val == 'number') {
+      return `$top=${val}`;
+    } else {
+      this.errorHandler(`top property must be typeof number not ${typeof val}`)
+    }
+  }
+
+  protected select(select: Array<string>): string {
+    let query = `$select=`;
+    for (let i = 0; i < select.length; i++) {
+      query += `${select[i]}`;
+      if (i == select.length - 1) {
+        return query;
+      }
+      query += ',';
+    }
+  }
+
+  protected expand(expand: Array<any>): string {
+    let query: string = '';
+    for (let i = 0; i < expand.length; i++) {
+      query += `$expand=${expand[i].value}`;
+      if (expand[i].valueName) {
+        query += `/${expand[i].valueName}`;
+      }
+      if (i == expand.length - 1) {
+        return query;
+      }
+      query += ',';
+    }
+  }
+
+  protected format(format: string): string {
+    if (this.storeChecker('format', format)) {
+      return `$format=${format}`;
+    } else {
+      this.errorHandler(`'format' can have 'json', 'xml' and 'atom' value not ${format}`);
+    }
+  }
+
+  protected inlineCount(inlineCount: string): string {
+    if (this.storeChecker('inlineCount', inlineCount)) {
+      return `$inlinecount=${inlineCount}`;
+    } else {
+      this.errorHandler(`'inlinecount' can have 'allpages' and 'none' value not ${inlineCount}`);
+    }
+  }
+
+  protected filter(filter: filter): string {
+    let query: string = '';
+    if (filter.func) {
+      if (this.storeChecker('functions', filter.func.name)) {
+        query += `$filter=${filter.func.name}(${filter.func.value}) eq ${filter.func.eqTo}`;
+      } else {
+        this.errorHandler(`system filter function property can't have ${filter.func.name} value`);
+      }
+    } else if (filter.operators) {
+      query += `$filter=${filter.value}`;
+      if (filter.valueName) {
+        query += `/${filter.valueName}`;
+      }
+
+      for (let i = 0; i < filter.operators.length; i++) {
+
+        //  check on logical operator existing and validation
+
+        let logical: string;
+        if (filter.operators[i].logical) {
+          if (this.storeChecker('logical', filter.operators[i].logical)) {
+            logical = filter.operators[i].logical;
+          } else {
+            this.errorHandler(`logical property can't have ${filter.operators[i].logical} value`);
+          }
+        } else {
+          logical = '';
+        }
+
+        // check on compare operator existing 
+
+        if (this.storeChecker('compare', filter.operators[i].value)) {
+          query += ` ${filter.operators[i].name}`;
+          if (i == filter.operators.length - 1) {
+            break;
+          }
+          query += logical;
+        } else {
+          this.errorHandler(`comapre property can't have ${filter.operators[i].value} value`);
+        }
+      }
+    } else {
+      this.errorHandler(`filter type can have 'function', 'expression' value >> ${filter}`);
+    }
+    return query;
+  }
+
+  /*
+    errorHandler
+  */
+
+  private errorHandler(message: string) {
+    throw new Error(message);
+  }
+
+  protected storeCheck() {
+    let monad = (store: any) => {
+      let data = Object.create(null);
+      data.get = (parameter: string, value: string) => {
+        if (store[parameter]) {
+          return store[parameter].indexOf(value) == -1 ? false : true;
+        } else {
+          this.errorHandler(`store you have does not include ${parameter} parameter`);
+        }
+      }
+      return data;
+    }
+    return monad;
+  }
+
+  protected storeChecker(parameter: string, value: string) {
+    let helper = this.storeCheck();
+    let check = helper(store);
+    return check.get(parameter, value);
   }
 }

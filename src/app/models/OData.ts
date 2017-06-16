@@ -28,7 +28,7 @@ export type order = {
   category?: order;
 }
 
-type filter = {
+ export type filter = {
   value: string;
   valueName?: string;
   operators?: Array<operator>;
