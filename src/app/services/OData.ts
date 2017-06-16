@@ -6,21 +6,104 @@ import { STORE as store } from '../assets/js/ODataStore';
 @Injectable()
 
 export class OData {
+
+  private queryParam: string = '';
     
-  get(query: query) {
-    return this.transform(query);
+  get(query?: query): any {
+    if (query) {
+      return this.transform(query);
+    }
+    return this.monad();
   }
 
-  private resourcePath : string;
-  private query: query;
+  private monad() {
+    let proto = Object.create(null);
+    let query: string = '';
+
+    let unity: any = () => {
+      let configs = Object.create(proto);
+      return configs;
+    }
+
+    let id = (val: number) => {
+      query += this.checkForId(val);
+      return unity;
+    }
+    
+    let skip = (val: number) => {
+      query += this.skip(val);
+      return unity;
+    }
+
+    let top = (val: number) => {
+      query += this.top(val);
+      return unity;
+    }
+
+    let select = (arr: Array<string>) => {
+      query += this.select(arr);
+      return unity;
+    }
+
+    let filter = (option : filter) => {
+      query += this.filter(option);
+      return unity;
+    }
+
+    let inlineCount = (count: string) => {
+      query += this.inlineCount(count);
+      return unity;
+    }
+
+    let orderBy = (data: order) => {
+      query += this.order(data);
+      return unity;
+    }
+
+    let format = (format: string) => {
+      query += this.format(format);
+      return unity;
+    }
+
+    let expand = (expand: Array<any>) => {
+      query += this.expand(expand);
+      return unity;
+    }
 
 
-  transform(options: query): string {
+    unity.method = (name: string, action: any) => {
+      proto[name] = action;
+      unity[name] = action;
+      return unity;
+    }
+
+    let then = (fn: any) => {
+      return fn(query);
+    }
+
+    // let catch = (fn: any) => {
+
+    // }
+
+    unity.method('id', id)
+        .method('select', select)
+        .method('format', format)
+        .method('expand', expand)
+        .method('inlineCount', inlineCount)
+        .method('filter', filter)
+        .method('orderBy', orderBy)
+        .method('top', top)
+        .method('skip', skip)
+        .method('then', then);
+
+    return unity;
+  }
+
+
+  private transform(options: query): string {
     if (options.system) {
 
-      let query: string = '';
-      
-      query = this.checkForId(options.id);
+      this.queryParam = this.checkForId(options.id);
 
       const system = options.system;
 
@@ -35,8 +118,8 @@ export class OData {
       */
 
       if (system.skip) {
-        query += this.checkForAddingAmpersant(query);
-        query += this.skip(system.skip);
+       
+        this.queryParam += this.skip(system.skip);
       }
 
       /* 'top' system query parameter workflow
@@ -49,15 +132,15 @@ export class OData {
       */
 
       if (system.top) {
-        query += this.checkForAddingAmpersant(query);
-        query += this.top(system.top);
+       
+        this.queryParam += this.top(system.top);
       }
       
       // order by functionality (default asc(increment))
 
       if (system.orderby) {
-        query += this.checkForAddingAmpersant(query);
-        query += this.order(system.orderby);
+        
+        this.queryParam += this.order(system.orderby);
       }
 
       /* 'filter' system query parameter workflow
@@ -72,8 +155,7 @@ export class OData {
 
       if (system.filter) {
 
-        query += this.checkForAddingAmpersant(query);
-        query += this.filter(system.filter);
+        this.queryParam += this.filter(system.filter);
       }
 
       /* 'select' system query property workflow
@@ -88,8 +170,7 @@ export class OData {
 
       if (system.select) {
 
-        query += this.checkForAddingAmpersant(query);
-        query += this.select(system.select);
+        this.queryParam += this.select(system.select);
       }
 
       /* 'expand' system query parameter workflow
@@ -101,8 +182,7 @@ export class OData {
 
       if (system.expand) {
 
-        query += this.checkForAddingAmpersant(query);
-        query += this.expand(system.expand);
+        this.queryParam += this.expand(system.expand);
       }
 
       /* 'format' system query option
@@ -113,9 +193,7 @@ export class OData {
 
       if (system.format) {
 
-        query += this.checkForAddingAmpersant(query);
-
-        query += this.format(system.format);
+        this.queryParam += this.format(system.format);
       }
 
 
@@ -129,9 +207,7 @@ export class OData {
 
       if (system.inlineCount) {
 
-        query += this.checkForAddingAmpersant(query);
-
-        query += this.inlineCount(system.inlineCount);
+        this.queryParam += this.inlineCount(system.inlineCount);
       }
 
       if (options.custom) {
@@ -153,7 +229,7 @@ export class OData {
       } else {
         console.info(`%cNo service params founded in this query ${options}`, 'color:blue');
       }
-      return query;
+      return this.queryParam;
     } else {
       this.errorHandler(`Cannot construct any OData query without system query params.`);
     }
@@ -167,9 +243,11 @@ export class OData {
   */
 
   protected order(data : order) {
-    let query: string = '$orderby=';
+    let query: string = '';
+    query += this.checkForAddingAmpersant(this.queryParam);
+    query += '$orderby=';
     let type: string;
-    
+
     if (data.type || (!data.type && !data.hasOwnProperty('type'))) {
       type = 'asc';
     } else {
@@ -205,23 +283,34 @@ export class OData {
   }
 
   protected skip(val : number): string {
+    let query: string = '';
+    query += this.checkForAddingAmpersant(this.queryParam);
+
     if (typeof val == 'number') {
-      return `$skip=${val}`;
+      query += `$skip=${val}`;
+      return query;
     } else {
       this.errorHandler(`skip property must be typeof number not ${typeof val}`);
     }
   }
 
   protected top(val: number): string {
+    let query: string = '';
+    query += this.checkForAddingAmpersant(this.queryParam);
+
     if (typeof val == 'number') {
-      return `$top=${val}`;
+      query += `$top=${val}`;
+      return query;
     } else {
       this.errorHandler(`top property must be typeof number not ${typeof val}`)
     }
   }
 
   protected select(select: Array<string>): string {
-    let query = `$select=`;
+    let query: string = '';
+    query += this.checkForAddingAmpersant(this.queryParam);
+    
+    query += `$select=`;
     for (let i = 0; i < select.length; i++) {
       query += `${select[i]}`;
       if (i == select.length - 1) {
@@ -233,6 +322,8 @@ export class OData {
 
   protected expand(expand: Array<any>): string {
     let query: string = '';
+    query += this.checkForAddingAmpersant(this.queryParam);
+
     for (let i = 0; i < expand.length; i++) {
       query += `$expand=${expand[i].value}`;
       if (expand[i].valueName) {
@@ -246,16 +337,24 @@ export class OData {
   }
 
   protected format(format: string): string {
+    let query: string = '';
+    query += this.checkForAddingAmpersant(this.queryParam);
+
     if (this.storeChecker('format', format)) {
-      return `$format=${format}`;
+      query += `$format=${format}`;
+      return query;
     } else {
       this.errorHandler(`'format' can have 'json', 'xml' and 'atom' value not ${format}`);
     }
   }
 
   protected inlineCount(inlineCount: string): string {
+    let query: string = '';
+    query += this.checkForAddingAmpersant(this.queryParam);
+
     if (this.storeChecker('inlineCount', inlineCount)) {
-      return `$inlinecount=${inlineCount}`;
+      query += `$inlinecount=${inlineCount}`;
+      return query;
     } else {
       this.errorHandler(`'inlinecount' can have 'allpages' and 'none' value not ${inlineCount}`);
     }
@@ -263,6 +362,8 @@ export class OData {
 
   protected filter(filter: filter): string {
     let query: string = '';
+    query += this.checkForAddingAmpersant(this.queryParam);
+    
     if (filter.func) {
       if (this.storeChecker('functions', filter.func.name)) {
         query += `$filter=${filter.func.name}(${filter.func.value}) eq ${filter.func.eqTo}`;
