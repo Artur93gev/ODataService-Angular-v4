@@ -44,7 +44,7 @@
     "systemjs": "0.19.39",
     "express": "3.4.7",
     "ejs-locals": "~1.0.2",
-    "zone.js": "^0.8.4"
+    "zone.js": "^0.8.29"
   },
   "devDependencies": {
     "@types/angular": "^1.5.16",
